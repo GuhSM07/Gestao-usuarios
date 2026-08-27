@@ -1,0 +1,5 @@
+import os
+
+arquivos = os.listdir("C:/Users/GuSkate/Downloads")
+
+print(arquivos)
