@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-torneio">
+    <div class="header-torneio">
+        <div>
+            <h1>⚙️ Gerar Bracket Manual - {{ torneio.nome }}</h1>
+            <p class="info-torneio">Escolha manualmente os adversários para o primeiro round</p>
+        </div>
+        <a href="{{ url_for('torneio.detalhe_torneio', torneio_id=torneio.id) }}" class="btn btn-secondary">← Voltar</a>
+    </div>
+
+    <form method="POST" style="max-width: 800px; margin: 20px auto;">
+        <div class="section" style="padding: 20px; background: #f9f9f9; border-radius: 8px;">
+            <h3>🥊 Selecione os Pares de Adversários</h3>
+            <p style="color: #666; margin-bottom: 20px;">
+                Total de participantes: <strong>{{ participantes|length }}</strong>
+                {% if participantes|length % 2 != 0 %}
+                    <br><span style="color: #d9534f;">⚠️ Número ímpar: um participante terá um "W.O" (vitória automática)</span>
+                {% endif %}
+            </p>
+
+            {% for i in range(0, (participantes|length + 1) // 2) %}
+                <div class="pair-container" style="background: white; padding: 15px; margin-bottom: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50;">Confronto {{ i + 1 }}</h4>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
+                        <!-- Participante 1 -->
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">
+                                Participante 1
+                            </label>
+                            <select name="p1_{{ i }}" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                <option value="">-- Selecione --</option>
+                                {% for p in participantes %}
+                                    <option value="{{ p.id }}">{{ p.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- VS -->
+                        <div style="text-align: center; font-weight: bold; color: #7f8c8d;">VS</div>
+
+                        <!-- Participante 2 -->
+                        <div>
+                            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">
+                                Participante 2
+                            </label>
+                            <select name="p2_{{ i }}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                <option value="">-- Selecione (Bye) --</option>
+                                {% for p in participantes %}
+                                    <option value="{{ p.id }}">{{ p.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Gerar bracket com seleção manual?\nIsto reseta qualquer bracket anterior.');">
+                    ✓ Gerar Bracket
+                </button>
+                <a href="{{ url_for('torneio.detalhe_torneio', torneio_id=torneio.id) }}" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <style>
+        .container-torneio {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .header-torneio {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .header-torneio h1 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .info-torneio {
+            margin: 10px 0 0 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .pair-container {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</div>
+{% endblock %}

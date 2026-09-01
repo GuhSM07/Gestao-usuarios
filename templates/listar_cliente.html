@@ -1,17 +1,34 @@
-<table class="table">
-  <thead>
-    <tr>
-      <th scope="col">ID</th>
-      <th scope="col">Nome</th>
-      <th scope="col">Email</th>
-      <th scope="col">Ações</th>
-    </tr>
-  </thead>
-  <tbody id="lista_clientes">
+{% extends "base.html" %}
 
-    {% for cliente in clientes %}
-        {% include 'item_cliente.html' %}
-    {% endfor %}
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>👥 Clientes</h2>
+        <a href="{{ url_for('cliente.form_cliente') }}" class="btn btn-primary">➕ Novo Cliente</a>
+    </div>
 
-  </tbody>
-</table>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Nome</th>
+          <th scope="col">Email</th>
+          <th scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody id="lista_clientes">
+
+        {% for cliente in clientes %}
+            {% include 'item_cliente.html' %}
+        {% endfor %}
+
+      </tbody>
+    </table>
+
+    {% if not clientes %}
+        <div class="alert alert-info" style="text-align: center;">
+            ℹ️ Nenhum cliente cadastrado. <a href="{{ url_for('cliente.form_cliente') }}">Criar um novo cliente</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

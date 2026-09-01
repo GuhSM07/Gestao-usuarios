@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, abort
+from flask import Blueprint, render_template, request, abort, redirect, url_for
 from database.models.cliente import Cliente
 
 cliente_route = Blueprint('cliente', __name__)
@@ -19,7 +19,7 @@ def listar_cliente():
     # '''Listar os clientes'''
 
 
-@cliente_route.route('/', methods=['POST'])
+@cliente_route.route('/new', methods=['POST'])
 def inserir_cliente():
 
     data = request.get_json(silent=True) or request.form
@@ -29,13 +29,13 @@ def inserir_cliente():
         email=data['email']
     )
 
-    return render_template('item_cliente.html', cliente=novo_usuario)
+    return redirect(url_for('cliente.listar_cliente'))
 
 
 @cliente_route.route('/new')
 def form_cliente():
     # '''Formularo para cadastrar um cliente'''
-    return render_template('form_cliente.html')
+    return render_template('form_cliente.html', cliente=None)
     
 
 @cliente_route.route('/<int:cliente_id>')
@@ -50,7 +50,7 @@ def editar_cliente(cliente_id):
     return render_template('form_cliente.html', cliente=cliente)
 
 
-@cliente_route.route('/<int:cliente_id>/update', methods=['PUT'])
+@cliente_route.route('/<int:cliente_id>/edit', methods=['POST'])
 def atualizar_cliente(cliente_id):
     cliente_editado = Cliente.get_by_id(cliente_id)
     data = request.get_json(silent=True) or request.form
@@ -59,11 +59,11 @@ def atualizar_cliente(cliente_id):
     cliente_editado.email = data['email']
     cliente_editado.save()
 
-    return render_template('item_cliente.html', cliente=cliente_editado)
+    return redirect(url_for('cliente.listar_cliente'))
 
 
-@cliente_route.route('/<int:cliente_id>/deletar', methods=['DELETE'])
+@cliente_route.route('/<int:cliente_id>/deletar', methods=['DELETE', 'POST'])
 def deletar_cliente(cliente_id):
     cliente = Cliente.get_by_id(cliente_id)
     cliente.delete_instance()
-    return {'deleted': 'ok'}
+    return redirect(url_for('cliente.listar_cliente'))

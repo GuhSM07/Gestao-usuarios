@@ -1,46 +1,107 @@
-<!doctype html>
-<html lang="pt-br">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-  </head>
-  <body>
+{% extends "base.html" %}
 
-    <div class="container">
+{% block content %}
+<div class="container" style="margin: 40px auto;">
+    <div class="dashboard-container">
+        <h1 style="text-align: center; margin-bottom: 40px;">🎮 Sistema de Gestão ⚙️</h1>
+        
+        <div class="dashboard-grid">
+            <!-- Card Torneios -->
+            <div class="dashboard-card">
+                <div class="card-icon">⚔️</div>
+                <h2>Gerenciar Torneios</h2>
+                <p>Crie, organize e acompanhe torneios com confrontos por chaveamento</p>
+                <a href="{{ url_for('torneio.listar_torneios') }}" class="btn btn-primary btn-block">Ir para Torneios</a>
+            </div>
 
-      <h1>Gestao de Clientes</h1>
-
-      <!-- Renderiza fromulario do cliente -->
-      <div id="form-cliente" c-container="{{ url_for('cliente.form_cliente') }}"></div>
-      
-      <hr>
-
-      <!-- Renderiza lista de clientes -->
-       <h2>Lista de Clientes</h2>
-      <div c-container="{{url_for('cliente.listar_cliente') }}"></div>
+            <!-- Card Clientes -->
+            <div class="dashboard-card">
+                <div class="card-icon">👥</div>
+                <h2>Gerenciar Clientes</h2>
+                <p>Gerencie informações de clientes e participantes</p>
+                <a href="{{ url_for('cliente.listar_cliente') }}" class="btn btn-secondary btn-block">Ir para Clientes</a>
+            </div>
+        </div>
     </div>
-
-    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel">Informações do Cliente</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" id="exibir_cliente"></div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div>
-
-    </div>
-  </div>
 </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-    <script src="{{  url_for('static', filename='js/cru.js')  }}"></script>
-  </body>
-</html>
+<style>
+    .dashboard-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .dashboard-card {
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        border-color: #007bff;
+    }
+
+    .card-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+    }
+
+    .dashboard-card h2 {
+        color: #333;
+        margin: 15px 0;
+        font-size: 1.5em;
+    }
+
+    .dashboard-card p {
+        color: #666;
+        font-size: 0.95em;
+        margin: 15px 0 25px 0;
+        line-height: 1.5;
+    }
+
+    .btn-block {
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 1em;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        display: block;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+</style>
+{% endblock %}

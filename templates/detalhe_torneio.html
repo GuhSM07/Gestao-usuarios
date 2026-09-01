@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-torneio">
+    <div class="header-torneio">
+        <div>
+            <h1>{{ torneio.nome }}</h1>
+
+            <p class="info-torneio">
+                <strong>Participantes:</strong> {{ total_participantes }} |
+                <strong>Confrontos:</strong> {{ torneio.confrontos.count() }} |
+                <strong>Status:</strong> 
+                <span class="badge badge-{{ torneio.status }}">
+                    {% if torneio.status == 'em_progresso' %}Em Progresso{% elif torneio.status == 'concluido' %}Concluído{% else %}{{ torneio.status }}{% endif %}
+                </span>
+            </p>
+
+        </div>
+        <a href="{{ url_for('torneio.listar_torneios') }}" class="btn btn-secondary">← Voltar</a>
+    </div>
+
+    <div class="content-grid">
+        <!-- SEÇÃO DE PARTICIPANTES -->
+        <div class="section participantes-section">
+            <h2>📋 Participantes</h2>
+            
+            {% if clientes_disponiveis %}
+                <form method="POST" action="{{ url_for('torneio.novo_participante', torneio_id=torneio.id) }}" class="form-add-participante">
+                    <select 
+                        name="cliente_id" 
+                        required
+                        title="Selecione um cliente para adicionar"
+                    >
+                        <option value="">-- Selecione um cliente --</option>
+                        {% for cliente in clientes_disponiveis %}
+                            <option value="{{ cliente.id }}">{{ cliente.nome }} ({{ cliente.email }})</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Adicionar</button>
+                </form>
+            {% else %}
+                <div class="alert alert-info">
+                    ℹ️ Todos os clientes já estão participando deste torneio
+                </div>
+            {% endif %}
+
+            <div class="participantes-list">
+                {% if participantes %}
+                    <ul>
+                        {% for p in participantes %}
+                            <li class="participante-item">
+                                <span class="p-nome">{{ p.cliente.nome }}</span>
+                                <small class="p-email">({{ p.cliente.email }})</small>
+                                {% if torneio.confrontos.count() == 0 %}
+                                    <form method="POST" action="{{ url_for('torneio.deletar_participante', torneio_id=torneio.id, pid=p.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn-delete" title="Remover participante" onclick="return confirm('Remover {{ p.cliente.nome }}?');">✕</button>
+                                    </form>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="empty-message">Nenhum participante adicionado ainda</p>
+                {% endif %}
+            </div>
+
+            {% if total_participantes >= 2 %}
+                <div class="bracket-buttons" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <form method="POST" action="{{ url_for('torneio.gerar_bracket', torneio_id=torneio.id) }}" style="flex: 1;">
+                        <button type="submit" class="btn btn-success" style="width: 100%;" onclick="return confirm('Gerar confrontos aleatórios com {{ total_participantes }} participantes?\nIsto reseta qualquer bracket anterior.');">
+                            🎯 Bracket Aleatório
+                        </button>
+                    </form>
+                    <a href="{{ url_for('torneio.gerar_bracket_manual', torneio_id=torneio.id) }}" class="btn btn-info" style="flex: 1; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        ⚙️ Bracket Manual
+                    </a>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    ⚠️ Adicione pelo menos 2 participantes para gerar o bracket
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- SEÇÃO DE CONFRONTOS -->
+        <div class="section confrontos-section">
+            <h2>⚔️ Confrontos</h2>
+
+            {% if confrontos_por_round %}
+                {% for round_num in confrontos_por_round|sort %}
+                    <div class="round-container">
+                        <h3 class="round-title">
+                            {% if round_num == 1 %}
+                                🥊 Primeira Fase
+                            {% elif round_num == max_round %}
+                                👑 Final
+                            {% elif round_num == max_round - 1 %}
+                                ⚡ Semifinal
+                            {% elif round_num == max_round - 2 %}
+                                🔷 Quarterfinal
+                            {% else %}
+                                Round {{ round_num }}
+                            {% endif %}
+                        </h3>
+
+                        <div class="confrontos-list">
+                            {% for conf in confrontos_por_round[round_num] %}
+                                <div class="confronto-card {% if conf.vencedor %}decidido{% endif %}">
+                                    <div class="confronto-header">
+                                        <span class="round-badge">Round {{ conf.round }}</span>
+                                        {% if conf.vencedor %}
+                                            <span class="vencedor-badge">✅ Decidido</span>
+                                        {% else %}
+                                            <span class="pendente-badge">⏳ Pendente</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="confronto-body">
+
+                                        <div class="participante {% if conf.vencedor and conf.vencedor.id == conf.participante1.id %}venceu{% endif %}">
+                                            <span class="nome">{{ conf.participante1.cliente.nome if conf.participante1 else "---" }}</span>
+                                            {% if not conf.vencedor %}
+                                                <form method="POST" action="{{ url_for('torneio.registrar_vencedor', torneio_id=torneio.id, conf_id=conf.id) }}" style="display: inline;">
+                                                    <input type="hidden" name="vencedor_id" value="{{ conf.participante1.id if conf.participante1 else '' }}">
+                                                    {% if conf.participante1 %}
+                                                        <button type="submit" class="btn-winner" title="Definir como vencedor">✓</button>
+                                                    {% endif %}
+                                                </form>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="vs">VS</div>
+
+                                        <div class="participante {% if conf.vencedor and conf.vencedor.id == (conf.participante2.id if conf.participante2 else -1) %}venceu{% endif %}">
+                                            <span class="nome">{{ conf.participante2.cliente.nome if conf.participante2 else "---" }}</span>
+                                            {% if not conf.vencedor %}
+                                                <form method="POST" action="{{ url_for('torneio.registrar_vencedor', torneio_id=torneio.id, conf_id=conf.id) }}" style="display: inline;">
+                                                    <input type="hidden" name="vencedor_id" value="{{ conf.participante2.id if conf.participante2 else '' }}">
+                                                    {% if conf.participante2 %}
+                                                        <button type="submit" class="btn-winner" title="Definir como vencedor">✓</button>
+                                                    {% endif %}
+                                                </form>
+                                            {% endif %}
+                                        </div>
+
+                                    </div>
+
+                                    {% if conf.vencedor %}
+                                        <div class="vencedor-info">
+                                            🏆 Vencedor: <strong>{{ conf.vencedor.cliente.nome }}</strong>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- VERIFICAR CAMPEÃO -->
+                {% set campeao = torneio.confrontos.where(torneio.confrontos.model.vencedor.is_null(False)).order_by(torneio.confrontos.model.round.desc()).first() %}
+                {% if campeao and campeao.round > 1 %}
+                    <div class="campeao-container">
+                        <div class="campeao-card">
+                            <h2>🏆 CAMPEÃO 🏆</h2>
+                            <p class="campeao-nome">{{ campeao.vencedor.cliente.nome }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <div class="alert alert-info">
+                    ℹ️ Nenhum confronto registrado. Adicione participantes e clique em "Gerar Bracket"
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .container-torneio {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .header-torneio {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .header-torneio h1 {
+        margin: 0;
+        color: #333;
+    }
+
+    .info-torneio {
+        margin: 10px 0 0 0;
+        color: #666;
+        font-size: 0.95em;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 30px;
+    }
+
+    @media (max-width: 1000px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+    .section h2 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+    }
+
+    /* PARTICIPANTES */
+    .form-add-participante {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .form-add-participante input,
+    .form-add-participante select {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.95em;
+        background-color: white;
+    }
+
+    .form-add-participante input:focus,
+    .form-add-participante select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .p-email {
+        color: #999;
+        font-size: 0.85em;
+        margin-left: 5px;
+    }
+
+    .participantes-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 20px 0;
+    }
+
+    .participante-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background: white;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .p-nome {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .btn-delete {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+
+    .btn-delete:hover {
+        background: #c82333;
+    }
+
+    .empty-message {
+        color: #999;
+        text-align: center;
+        padding: 20px;
+        background: white;
+        border-radius: 4px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin: 15px 0;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+    }
+
+    /* CONFRONTOS */
+    .round-container {
+        margin-bottom: 30px;
+    }
+
+    .round-title {
+        background: #007bff;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin: 0 0 15px 0;
+        font-size: 1.1em;
+    }
+
+    .confrontos-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .confronto-card {
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .confronto-card.decidido {
+        border-color: #28a745;
+        background: #f0f8f5;
+    }
+
+    .confronto-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: #f1f3f5;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .round-badge {
+        background: #6c757d;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+
+    .vencedor-badge {
+        background: #28a745;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+
+    .pendente-badge {
+        background: #ffc107;
+        color: #333;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+
+    .confronto-body {
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .participante {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #f8f9fa;
+        margin: 5px 0;
+        border-radius: 4px;
+        border-left: 3px solid transparent;
+    }
+
+    .participante.venceu {
+        background: #d4edda;
+        border-left-color: #28a745;
+        font-weight: bold;
+    }
+
+    .participante .nome {
+        flex-grow: 1;
+    }
+
+    .btn-winner {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-winner:hover {
+        background: #218838;
+    }
+
+    .vs {
+        text-align: center;
+        padding: 5px 0;
+        font-weight: bold;
+        color: #666;
+        font-size: 0.9em;
+    }
+
+    .vencedor-info {
+        padding: 10px 15px;
+        background: #d4edda;
+        color: #155724;
+        border-top: 1px solid #c3e6cb;
+        font-weight: bold;
+    }
+
+    /* CAMPEÃO */
+    .campeao-container {
+        margin: 40px 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .campeao-card {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        padding: 30px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        border: 3px solid #daa520;
+    }
+
+    .campeao-card h2 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 2em;
+        border: none;
+        padding: 0;
+    }
+
+    .campeao-nome {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 0;
+    }
+
+    /* BOTÕES */
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+        width: 100%;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+
+    .badge-em_progresso {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-finalizado {
+        background: #cfe2ff;
+        color: #084298;
+    }
+
+    .badge-concluido {
+        background: #fff3cd;
+        color: #664d03;
+    }
+</style>
+{% endblock %}

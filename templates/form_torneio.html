@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>Criar Novo Torneio</h1>
+
+    <form method="POST" class="form-container">
+        <div class="form-group">
+            <label for="nome">Nome do Torneio/Evento:</label>
+            <input 
+                type="text" 
+                id="nome" 
+                name="nome" 
+                required 
+                placeholder="Ex: Batalha da QZ"
+                autofocus
+            >
+        </div>
+
+        <div class="form-group">
+            <label>Selecione os Participantes:</label>
+            <div class="select-all-wrapper">
+                <input type="checkbox" id="selectAllCheckbox">
+                <label for="selectAllCheckbox" class="checkbox-label">Selecionar Todos</label>
+            </div>
+            <div class="participants-list">
+                {% for cliente in clientes %}
+                    <div class="participant-item">
+                        <input 
+                            type="checkbox" 
+                            id="cliente_{{ cliente.id }}" 
+                            name="participantes" 
+                            value="{{ cliente.id }}"
+                            class="participant-checkbox"
+                        >
+                        <label for="cliente_{{ cliente.id }}" class="participant-label">
+                            {{ cliente.nome }} ({{ cliente.email }})
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">✅ Criar Torneio</button>
+            <a href="{{ url_for('torneio.listar_torneios') }}" class="btn btn-secondary">❌ Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .container {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .form-container {
+        background: #f8f9fa;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+
+    .form-group select {
+        background-color: white;
+    }
+
+    .form-group select option:checked {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .select-all-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #e7f3ff;
+        border-radius: 4px;
+    }
+
+    .select-all-wrapper input[type="checkbox"] {
+        width: auto;
+        padding: 0;
+        cursor: pointer;
+        accent-color: #007bff;
+    }
+
+    .checkbox-label {
+        margin: 0;
+        font-weight: 600;
+        color: #0056b3;
+        cursor: pointer;
+        display: inline;
+    }
+
+    .participants-list {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .participant-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .participant-item:last-child {
+        border-bottom: none;
+    }
+
+    .participant-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .participant-item input[type="checkbox"] {
+        width: auto;
+        padding: 0;
+        cursor: pointer;
+        accent-color: #007bff;
+        min-width: 18px;
+        height: 18px;
+    }
+
+    .participant-label {
+        margin: 0;
+        cursor: pointer;
+        display: inline;
+        font-weight: normal;
+        color: #333;
+        flex: 1;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+        color: #666;
+        font-size: 12px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const participantCheckboxes = document.querySelectorAll('.participant-checkbox');
+
+        // Quando o checkbox "Selecionar Todos" é marcado/desmarcado
+        selectAllCheckbox.addEventListener('change', function() {
+            participantCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        // Quando qualquer checkbox individual é marcado/desmarcado
+        participantCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // Verifica se todos estão selecionados
+                const allChecked = Array.from(participantCheckboxes).every(cb => cb.checked);
+                // Verifica se nenhum está selecionado
+                const noneChecked = Array.from(participantCheckboxes).every(cb => !cb.checked);
+                
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+            });
+        });
+
+        // Validação do formulário para garantir que pelo menos um foi selecionado
+        const form = document.querySelector('.form-container');
+        form.addEventListener('submit', function(e) {
+            const anyChecked = Array.from(participantCheckboxes).some(cb => cb.checked);
+            if (!anyChecked) {
+                e.preventDefault();
+                alert('Por favor, selecione pelo menos um participante!');
+            }
+        });
+    });
+</script>
+{% endblock %}
