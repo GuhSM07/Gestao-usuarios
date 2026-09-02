@@ -385,11 +385,13 @@ def registrar_vencedor(torneio_id, conf_id):
             (Confronto.torneio == torneio) & (Confronto.round == round_atual)
         ).count()
         
-        # Conta quantos confrontos do round atual TÊM vencedor
+        # Conta quantos confrontos do round atual foram decididos
+        # Considerando: confrontos com vencedor OU confrontos com W.O (participante2=None)
         confrontos_decididos = Confronto.select().where(
             (Confronto.torneio == torneio) & 
             (Confronto.round == round_atual) & 
-            (Confronto.vencedor.is_null(False))  # is_null(False) = tem vencedor
+            ((Confronto.vencedor.is_null(False)) |  # Tem vencedor
+             (Confronto.participante2.is_null(True)))  # Ou é W.O (sem adversário)
         ).count()
         
         # Se TODOS os confrontos do round foram decididos E há mais de 1 confronto
@@ -406,9 +408,12 @@ def registrar_vencedor(torneio_id, conf_id):
         todos_confrontos = Confronto.select().where(Confronto.torneio == torneio)
         total_conf = todos_confrontos.count()
         
-        # Conta quantos confrontos DO TORNEIO INTEIRO têm vencedor
+        # Conta quantos confrontos DO TORNEIO INTEIRO foram decididos
+        # Considerando: confrontos com vencedor OU confrontos com W.O (participante2=None)
         conf_decididos = Confronto.select().where(
-            (Confronto.torneio == torneio) & (Confronto.vencedor.is_null(False))
+            (Confronto.torneio == torneio) & 
+            ((Confronto.vencedor.is_null(False)) |  # Tem vencedor
+             (Confronto.participante2.is_null(True)))  # Ou é W.O (sem adversário)
         ).count()
         
         # Se TODOS os confrontos do torneio foram decididos
@@ -433,13 +438,15 @@ def registrar_vencedor(torneio_id, conf_id):
 
 def gerar_proximo_round(torneio, round_atual):
     """Gera automaticamente os confrontos do próximo round"""
-    # SELECT: Busca todos os confrontos decididos (com vencedor) do round atual
+    # SELECT: Busca todos os confrontos decididos do round atual
+    # Considerando: com vencedor OU W.O (participante2=None)
     vencedores_round = list(
         Confronto.select()
         .where(
             (Confronto.torneio == torneio) & 
             (Confronto.round == round_atual) &
-            (Confronto.vencedor.is_null(False))  # Só confrontos com vencedor
+            ((Confronto.vencedor.is_null(False)) |  # Tem vencedor
+             (Confronto.participante2.is_null(True)))  # Ou é W.O (sem adversário)
         )
         .order_by(Confronto.id)  # Ordena por ID para pareamentos ordenados
     )
@@ -451,10 +458,16 @@ def gerar_proximo_round(torneio, round_atual):
     # range(0, len, 2) pega índices: 0, 2, 4, 6, ... (progressão de 2 em 2)
     for i in range(0, len(vencedores_round), 2):
         # Participante 1 (sempre existe - é o índice i)
-        p1 = vencedores_round[i].vencedor  # Extrai o vencedor do confronto anterior
+        # Se tem vencedor, usa vencedor. Se é W.O (participante2=None), usa participante1
+        conf1 = vencedores_round[i]
+        p1 = conf1.vencedor if conf1.vencedor else conf1.participante1
         
         # Participante 2 (pode ser None se houver número ímpar)
-        p2 = vencedores_round[i + 1].vencedor if i + 1 < len(vencedores_round) else None
+        if i + 1 < len(vencedores_round):
+            conf2 = vencedores_round[i + 1]
+            p2 = conf2.vencedor if conf2.vencedor else conf2.participante1
+        else:
+            p2 = None
         
         # CASO 1: Há dois participantes (pareamento normal)
         if p1 and p2:
@@ -469,13 +482,14 @@ def gerar_proximo_round(torneio, round_atual):
         # CASO 2: Há apenas um participante (número ímpar de vencedores)
         elif p1:
             # INSERT: Cria um "bye" automático (p1 passa direto)
-            # Vence automaticamente sem adversário
+            # Não marca vencedor - apenas deixa o participante2 como None
+            # O sistema considera participante2=None como "passou automaticamente"
             Confronto.create(
                 torneio=torneio,
                 participante1=p1,
-                participante2=None,  # Sem adversário
-                round=proximo_round,
-                vencedor=p1  # Já marcado como vencedor (vitória automática)
+                participante2=None,  # Sem adversário - marca como W.O
+                round=proximo_round
+                # vencedor NÃO é preenchido - apenas passa automaticamente
             )
 
 
@@ -512,3 +526,82 @@ def deletar_torneio(torneio_id):
     # Redireciona para a página de lista de torneios
     return redirect(url_for('torneio.listar_torneios'))
 
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# 11. MODO PLATEIA (SELEÇÃO COM NÚMEROS E REVELAÇÃO DE NOMES)
+# ─────────────────────────────────────────────────────────────────────────────────
+# URL: GET /torneios/<id>/modo-plateia (formulário) | POST (criar)
+# O que faz: 
+#   - GET: Exibe uma interface com números embaralhados (nomes ocultos)
+#   - Permite selecionar dois números por vez
+#   - Revela os nomes quando dois são selecionados
+#   - POST: Cria os confrontos baseado nas seleções
+# Onde fica: Botão "👥 Modo Plateia" em detalhe_torneio.html
+
+@torneio_route.route('/<int:torneio_id>/modo-plateia', methods=['GET', 'POST'])
+def modo_plateia(torneio_id):
+    """Modo Plateia: Seleção com números, revelação de nomes ao selecionar dois números"""
+    # Valida se o torneio existe
+    try:
+        torneio = Torneio.get(Torneio.id == torneio_id)
+    except Torneio.DoesNotExist:
+        abort(404)
+    
+    # SELECT: Pega lista de todos os participantes
+    participantes = list(torneio.participantes)
+    
+    # Se o método é POST, significa que o usuário finalizou as seleções
+    if request.method == 'POST':
+        # DELETE: Apaga todos os confrontos anteriores (reseta o bracket)
+        Confronto.delete().where(Confronto.torneio == torneio).execute()
+        
+        # Conta quantos pares o usuário selecionou
+        pares_count = len([k for k in request.form.keys() if k.startswith('par_p1_')])
+        
+        # Processa cada par selecionado pelo usuário
+        for i in range(pares_count):
+            # Pega o ID do participante 1 (obrigatório)
+            p1_id = request.form.get(f'par_p1_{i}')
+            # Pega o ID do participante 2 (opcional - pode ser bye)
+            p2_id = request.form.get(f'par_p2_{i}')
+            
+            # Se o participante 1 foi selecionado
+            if p1_id:
+                try:
+                    # SELECT: Busca o participante no banco de dados
+                    p1 = Participante.get(Participante.id == int(p1_id))
+                    p2 = None
+                    
+                    # Se participante 2 foi selecionado
+                    if p2_id and p2_id != '':
+                        # SELECT: Busca o participante 2
+                        p2 = Participante.get(Participante.id == int(p2_id))
+                    
+                    # INSERT: Cria o confronto
+                    Confronto.create(
+                        torneio=torneio,
+                        participante1=p1,
+                        participante2=p2,
+                        round=1
+                    )
+                except (Participante.DoesNotExist, ValueError):
+                    # Se algum participante não existir, ignora
+                    pass
+        
+        # Redireciona para a página de detalhes do torneio
+        return redirect(url_for('torneio.detalhe_torneio', torneio_id=torneio_id))
+    
+    # GET: Exibe o modo plateia com números embaralhados
+    # Embaralha os participantes
+    participantes_embaralhados = participantes.copy()
+    random.shuffle(participantes_embaralhados)
+    
+    # Cria um dicionário com número -> participante
+    participantes_numerados = {i + 1: p for i, p in enumerate(participantes_embaralhados)}
+    
+    return render_template(
+        'modo_plateia.html',
+        torneio=torneio,
+        participantes=participantes,
+        participantes_numerados=participantes_numerados
+    )

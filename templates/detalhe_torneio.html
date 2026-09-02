@@ -65,14 +65,17 @@
             </div>
 
             {% if total_participantes >= 2 %}
-                <div class="bracket-buttons" style="display: flex; gap: 10px; margin-top: 15px;">
-                    <form method="POST" action="{{ url_for('torneio.gerar_bracket', torneio_id=torneio.id) }}" style="flex: 1;">
+                <div class="bracket-buttons" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <form method="POST" action="{{ url_for('torneio.gerar_bracket', torneio_id=torneio.id) }}" style="flex: 1; min-width: 150px;">
                         <button type="submit" class="btn btn-success" style="width: 100%;" onclick="return confirm('Gerar confrontos aleatórios com {{ total_participantes }} participantes?\nIsto reseta qualquer bracket anterior.');">
-                            🎯 Bracket Aleatório
+                            🎯 Chaveamento Automático
                         </button>
                     </form>
-                    <a href="{{ url_for('torneio.gerar_bracket_manual', torneio_id=torneio.id) }}" class="btn btn-info" style="flex: 1; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
-                        ⚙️ Bracket Manual
+                    <a href="{{ url_for('torneio.gerar_bracket_manual', torneio_id=torneio.id) }}" class="btn btn-info" style="flex: 1; min-width: 150px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        ⚙️ Chaveamento Manual
+                    </a>
+                    <a href="{{ url_for('torneio.modo_plateia', torneio_id=torneio.id) }}" class="btn btn-warning" style="flex: 1; min-width: 150px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                        👥 Modo Plateia
                     </a>
                 </div>
             {% else %}
@@ -105,11 +108,17 @@
 
                         <div class="confrontos-list">
                             {% for conf in confrontos_por_round[round_num] %}
-                                <div class="confronto-card {% if conf.vencedor %}decidido{% endif %}">
+                                {% set é_wo = conf.participante2 is none %}
+                                {% set está_decidido = conf.vencedor or é_wo %}
+                                <div class="confronto-card {% if está_decidido %}decidido{% endif %}">
                                     <div class="confronto-header">
                                         <span class="round-badge">Round {{ conf.round }}</span>
-                                        {% if conf.vencedor %}
-                                            <span class="vencedor-badge">✅ Decidido</span>
+                                        {% if está_decidido %}
+                                            {% if é_wo %}
+                                                <span class="wo-badge">🎯 W.O</span>
+                                            {% else %}
+                                                <span class="vencedor-badge">✅ Decidido</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="pendente-badge">⏳ Pendente</span>
                                         {% endif %}
@@ -117,9 +126,9 @@
 
                                     <div class="confronto-body">
 
-                                        <div class="participante {% if conf.vencedor and conf.vencedor.id == conf.participante1.id %}venceu{% endif %}">
+                                        <div class="participante {% if conf.vencedor and conf.vencedor.id == conf.participante1.id %}venceu{% elif é_wo %}venceu{% endif %}">
                                             <span class="nome">{{ conf.participante1.cliente.nome if conf.participante1 else "---" }}</span>
-                                            {% if not conf.vencedor %}
+                                            {% if not está_decidido %}
                                                 <form method="POST" action="{{ url_for('torneio.registrar_vencedor', torneio_id=torneio.id, conf_id=conf.id) }}" style="display: inline;">
                                                     <input type="hidden" name="vencedor_id" value="{{ conf.participante1.id if conf.participante1 else '' }}">
                                                     {% if conf.participante1 %}
@@ -129,25 +138,31 @@
                                             {% endif %}
                                         </div>
 
-                                        <div class="vs">VS</div>
+                                        <div class="vs">{% if é_wo %}W.O{% else %}VS{% endif %}</div>
 
                                         <div class="participante {% if conf.vencedor and conf.vencedor.id == (conf.participante2.id if conf.participante2 else -1) %}venceu{% endif %}">
-                                            <span class="nome">{{ conf.participante2.cliente.nome if conf.participante2 else "---" }}</span>
-                                            {% if not conf.vencedor %}
-                                                <form method="POST" action="{{ url_for('torneio.registrar_vencedor', torneio_id=torneio.id, conf_id=conf.id) }}" style="display: inline;">
-                                                    <input type="hidden" name="vencedor_id" value="{{ conf.participante2.id if conf.participante2 else '' }}">
-                                                    {% if conf.participante2 %}
+                                            {% if conf.participante2 %}
+                                                <span class="nome">{{ conf.participante2.cliente.nome }}</span>
+                                                {% if not está_decidido %}
+                                                    <form method="POST" action="{{ url_for('torneio.registrar_vencedor', torneio_id=torneio.id, conf_id=conf.id) }}" style="display: inline;">
+                                                        <input type="hidden" name="vencedor_id" value="{{ conf.participante2.id }}">
                                                         <button type="submit" class="btn-winner" title="Definir como vencedor">✓</button>
-                                                    {% endif %}
-                                                </form>
+                                                    </form>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="nome" style="color: #95a5a6; font-style: italic;">--- (Vitória Automática) ---</span>
                                             {% endif %}
                                         </div>
 
                                     </div>
 
-                                    {% if conf.vencedor %}
+                                    {% if conf.vencedor or é_wo %}
                                         <div class="vencedor-info">
-                                            🏆 Vencedor: <strong>{{ conf.vencedor.cliente.nome }}</strong>
+                                            {% if é_wo %}
+                                                🎯 W.O: <strong>{{ conf.participante1.cliente.nome }}</strong> avançou automaticamente
+                                            {% else %}
+                                                🏆 Vencedor: <strong>{{ conf.vencedor.cliente.nome }}</strong>
+                                            {% endif %}
                                         </div>
                                     {% endif %}
                                 </div>
@@ -157,14 +172,21 @@
                 {% endfor %}
 
                 <!-- VERIFICAR CAMPEÃO -->
-                {% set campeao = torneio.confrontos.where(torneio.confrontos.model.vencedor.is_null(False)).order_by(torneio.confrontos.model.round.desc()).first() %}
-                {% if campeao and campeao.round > 1 %}
-                    <div class="campeao-container">
-                        <div class="campeao-card">
-                            <h2>🏆 CAMPEÃO 🏆</h2>
-                            <p class="campeao-nome">{{ campeao.vencedor.cliente.nome }}</p>
-                        </div>
-                    </div>
+                {% if torneio.status == 'concluido' %}
+                    {% for conf in torneio.confrontos if conf.round == max_round and (conf.vencedor or conf.participante2 is none) %}
+                        {% if loop.index0 == 0 %}
+                            <div class="campeao-container">
+                                <div class="campeao-card">
+                                    <h2>🏆 CAMPEÃO 🏆</h2>
+                                    {% if conf.vencedor %}
+                                        <p class="campeao-nome">{{ conf.vencedor.cliente.nome }}</p>
+                                    {% elif conf.participante2 is none %}
+                                        <p class="campeao-nome">{{ conf.participante1.cliente.nome }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
                 {% endif %}
 
             {% else %}
@@ -381,6 +403,15 @@
         font-weight: bold;
     }
 
+    .wo-badge {
+        background: #6f42c1;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+
     .pendente-badge {
         background: #ffc107;
         color: #333;
@@ -516,6 +547,24 @@
 
     .btn-success:hover {
         background: #218838;
+    }
+
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background: #138496;
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
     }
 
     .badge {

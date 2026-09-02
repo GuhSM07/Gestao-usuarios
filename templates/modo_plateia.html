@@ -4,19 +4,19 @@
 <div class="container-plateia">
     <div class="header-plateia">
         <div>
-            <h1>⚙️ Gerar Bracket Manual - {{ torneio.nome }}</h1>
-            <p class="info-plateia">Selecione dois números por vez para criar os pares do bracket.</p>
+            <h1>👥 Modo Plateia - {{ torneio.nome }}</h1>
+            <p class="info-plateia">Selecione dois números por vez. Os nomes serão revelados quando você selecionar o segundo número.</p>
         </div>
         <a href="{{ url_for('torneio.detalhe_torneio', torneio_id=torneio.id) }}" class="btn btn-secondary">← Voltar</a>
     </div>
 
-    <form method="POST" id="formManual">
+    <form method="POST" id="formPlateia">
         <!-- Seção de seleção de números -->
         <div class="section plateia-section">
-            <h3>🥊 Selecione os Pares</h3>
+            <h3>🎯 Selecione os Pares</h3>
             <p class="instrucoes">
-                Total de participantes: <strong>{{ participantes_numerados|length }}</strong>
-                {% if participantes_numerados|length % 2 != 0 %}
+                Total de participantes: <strong>{{ participantes|length }}</strong>
+                {% if participantes|length % 2 != 0 %}
                     <br><span style="color: #d9534f;">⚠️ Número ímpar: um participante terá um "W.O" (vitória automática)</span>
                 {% endif %}
             </p>
@@ -31,7 +31,7 @@
                         data-nome="{{ participante.cliente.nome }}"
                     >
                         <div class="numero-display">{{ numero }}</div>
-                        <div class="nome-display">{{ participante.cliente.nome }}</div>
+                        <div class="nome-display" style="display: none;">{{ participante.cliente.nome }}</div>
                     </div>
                 {% endfor %}
             </div>
@@ -98,7 +98,7 @@
 
         .numeros-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
             padding: 20px;
@@ -111,7 +111,6 @@
             background: linear-gradient(135deg, #3498db, #2980b9);
             border-radius: 8px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
@@ -120,10 +119,9 @@
             position: relative;
             color: white;
             font-weight: bold;
+            font-size: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             border: 2px solid transparent;
-            padding: 10px;
-            gap: 5px;
         }
 
         .numero-card:hover {
@@ -145,16 +143,24 @@
 
         .numero-display {
             text-align: center;
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 32px;
         }
 
         .nome-display {
-            text-align: center;
-            font-size: 12px;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
             color: white;
+            font-size: 12px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
             word-wrap: break-word;
-            line-height: 1.3;
         }
 
         .pares-selecionados {
@@ -260,23 +266,23 @@
 
         @media (max-width: 768px) {
             .numeros-grid {
-                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
                 gap: 10px;
                 padding: 10px;
             }
 
             .numero-card {
-                font-size: 14px;
+                font-size: 18px;
             }
 
             .numero-display {
-                font-size: 20px;
+                font-size: 24px;
             }
         }
     </style>
 
     <script>
-        const form = document.getElementById('formManual');
+        const form = document.getElementById('formPlateia');
         const numerosGrid = document.getElementById('numerosGrid');
         const paresList = document.getElementById('paresList');
         
@@ -304,9 +310,11 @@
             if (selecionados.includes(numero)) {
                 selecionados = selecionados.filter(n => n != numero);
                 card.classList.remove('selecionado');
+                card.querySelector('.nome-display').style.display = 'none';
             } else {
                 selecionados.push(numero);
                 card.classList.add('selecionado');
+                card.querySelector('.nome-display').style.display = 'flex';
 
                 // Se já tem 2 selecionados, cria um par
                 if (selecionados.length === 2) {
@@ -342,6 +350,8 @@
             card2.classList.add('desabilitado');
             card1.classList.remove('selecionado');
             card2.classList.remove('selecionado');
+            card1.querySelector('.nome-display').style.display = 'none';
+            card2.querySelector('.nome-display').style.display = 'none';
 
             // Limpa a seleção
             selecionados = [];
