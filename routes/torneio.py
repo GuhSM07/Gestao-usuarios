@@ -292,16 +292,16 @@ def gerar_bracket_manual(torneio_id):
         Confronto.delete().where(Confronto.torneio == torneio).execute()
         
         # Conta quantos pares o usuário selecionou
-        # Conta quantas campos 'p1_' existem no formulário
-        pares_count = len([k for k in request.form.keys() if k.startswith('p1_')])
+        # Conta quantas campos 'par_p1_' existem no formulário
+        pares_count = len([k for k in request.form.keys() if k.startswith('par_p1_')])
         
         # Processa cada par selecionado pelo usuário
-        # O template gera campos como p1_0, p2_0, p1_1, p2_1, etc.
+        # O template gera campos como par_p1_0, par_p2_0, par_p1_1, par_p2_1, etc.
         for i in range(pares_count):
             # Pega o ID do participante 1 (obrigatório)
-            p1_id = request.form.get(f'p1_{i}')
+            p1_id = request.form.get(f'par_p1_{i}')
             # Pega o ID do participante 2 (opcional - pode ser bye)
-            p2_id = request.form.get(f'p2_{i}')
+            p2_id = request.form.get(f'par_p2_{i}')
             
             # Se o participante 1 foi selecionado
             if p1_id:
@@ -330,10 +330,18 @@ def gerar_bracket_manual(torneio_id):
         return redirect(url_for('torneio.detalhe_torneio', torneio_id=torneio_id))
     
     # GET: Exibe o formulário de seleção manual
+    # Embaralha os participantes
+    participantes_embaralhados = participantes.copy()
+    random.shuffle(participantes_embaralhados)
+    
+    # Cria um dicionário com número -> participante (igual ao modo_plateia)
+    participantes_numerados = {i + 1: p for i, p in enumerate(participantes_embaralhados)}
+    
     return render_template(
         'gerar_bracket_manual.html',
         torneio=torneio,
-        participantes=participantes
+        participantes=participantes,
+        participantes_numerados=participantes_numerados
     )
 
 
