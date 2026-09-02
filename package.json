@@ -1,0 +1,31 @@
+{
+  "name": "torneios-app",
+  "version": "1.0.0",
+  "description": "Aplicação de Torneios - PWA + APK com Offline",
+  "main": "main.py",
+  "scripts": {
+    "setup:capacitor": "npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor/ios",
+    "add:android": "npx cap add android",
+    "open:android": "npx cap open android",
+    "build:apk": "npx cap build android",
+    "run:android": "npx cap run android",
+    "sync:android": "npx cap sync android"
+  },
+  "keywords": [
+    "torneios",
+    "pwa",
+    "offline",
+    "android",
+    "app"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/cli": "^5.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/core": "^5.0.0",
+    "@capacitor/ios": "^5.0.0"
+  }
+}

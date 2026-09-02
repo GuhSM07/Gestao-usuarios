@@ -1,0 +1,33 @@
+{
+  "appId": "com.gestorusuarios.torneios",
+  "appName": "Torneios",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https",
+    "url": "http://localhost:5000",
+    "cleartext": true
+  },
+  "ios": {
+    "contentInsetAdjustmentBehavior": "never"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 3000,
+      "launchAutoHide": true,
+      "backgroundColor": "#2c3e50",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashImmersive": true,
+      "splashFullScreen": true,
+      "layoutId": "launch_screen"
+    },
+    "StatusBar": {
+      "style": "dark",
+      "backgroundColor": "#2c3e50"
+    }
+  }
+}

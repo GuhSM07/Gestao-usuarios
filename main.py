@@ -12,6 +12,7 @@
 # RESULTADO: Servidor Flask inicia em localhost:5000
 
 from flask import Flask  # Framework web
+from flask_cors import CORS  # CORS para requisições cruzadas
 from configuration import configure_all  # Função que configura TUDO
  
 
@@ -22,6 +23,9 @@ from configuration import configure_all  # Função que configura TUDO
 # Isso permite que Flask saiba onde procurar por templates e arquivos estáticos
 
 app = Flask(__name__)
+
+# Habilita CORS para requisições cruzadas (necessário para PWA/APK)
+CORS(app)
 
 
 # ─────────────────────────────────────────────────────────────────────────────────
@@ -43,8 +47,10 @@ configure_all(app)
 #   - Mostra erro traceback completo se algo der ruim
 #   - Abre debugger interativo em caso de erro
 #
-# Acesse em: http://localhost:5000
+# host='0.0.0.0' permite conexões de qualquer IP na rede
+# Acesse em: http://localhost:5000 (local)
+#           http://<seu-ip>:5000 (de outro dispositivo na rede)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
 

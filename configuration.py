@@ -10,6 +10,7 @@
 from routes.home import home_route  # Rota inicial/home
 from routes.cliente import cliente_route  # Rotas de gestão de clientes
 from routes.torneio import torneio_route  # Rotas de gestão de torneios
+from routes.api import api_route  # Rotas de API (sincronização offline)
 
 # IMPORTAÇÕES: Banco de dados
 from database.database import db  # Conexão com banco (SQLite)
@@ -55,6 +56,12 @@ def configure_routes(app):
     #          POST /torneios/novo (criar)
     #          GET /torneios/<id> (detalhes)
     app.register_blueprint(torneio_route, url_prefix='/torneios')
+    
+    # Registra a rota de API (para sincronização offline)
+    # URL base: /api
+    # Exemplo: GET /api/clientes-json (dados para cache)
+    #          POST /api/sync (sincronização)
+    app.register_blueprint(api_route)
 
 
 # ─────────────────────────────────────────────────────────────────────────────────
